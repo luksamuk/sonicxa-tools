@@ -1,0 +1,132 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+
+;;;; buildprl.ros
+;;;; Part of sonicxa-tools.
+;;;; Copyright (c) 2025 Lucas S. Vieira
+;;;; This project is distributed under the Mozilla Public License 2.0.
+
+(progn (ros:ensure-asdf)
+       (unless (find-package :sonicxa-tools)
+         (ql:quickload :sonicxa-tools :silent t)))
+
+(defpackage :ros.script.buildprl
+  (:use #:cl #:uiop #:buildprl))
+
+(in-package #:ros.script.buildprl)
+
+(defmacro format-usage (&body strings)
+  `(format
+    t
+    (concatenate 'string
+		 ,@(loop for string in strings
+		         collect (concatenate 'string string "~%")))))
+
+(defun show-usage ()
+  (format-usage
+    "buildprl v0.1"
+    "Part of Sonic XA Dev Tools"
+    "Copyright (c) 2025 Lucas S. Vieira"
+    "Distributed under the Mozilla Public License 2.0.~%"
+
+    "Usage: buildprl [args] /path/to/parallax.toml~%"
+
+    "Args:"
+    "  -h | --help     Prints this help text and exits."
+    "  -d | --dry-run  Simulates the output in readable binary format without"
+    "                  writing a PRL.PRL file.~%"
+
+    "Output:"
+    "A PRL.PRL file on the same directory as the parallax.toml.~%"
+    
+    "This tool parses a TOML file containing the description of the parallax"
+    "layers for a level.~%"
+
+    "A parallax layer is a single horizontal strip that will be formed of a"
+    "repeated part of a texture loaded on VRAM. Since these textures are"
+    "alotted at specific VRAM regions, you can picture a single parallax strip"
+    "as having its top left corner at a specific UV coordinate, which can"
+    "exceed the 255 pixel boundary on the V component. When this happens, the"
+    "V component indexing is treated at being at BG1 instead of BG0.~%"
+
+    "However, be wary that there are some LIMITATIONS. A layer V component plus"
+    "its height can never exceed the 255 pixel boundary. This is because layers"
+    "cannot be formed out of individual parts of BG0 and BG1 at the same time,"
+    "so these parts have to be managed.~%"
+
+    "Furthermore, generally parallaxes are fixed on the screen Y coordinate,"
+    "with notable exceptions such as R5 (Amazing Ocean Zone), which has a very"
+    "specific background movement to integrate the water level and the"
+    "background."
+
+    "The parallax.toml contains the definition for every layer, and each layer"
+    "has to have a unique name, while also containing the fields:~%"
+    "  - width: Width of a single layer strip in pixels, and also the width of"
+    "           the mapped texture from VRAM. Works better with sizes that are"
+    "           powers of two."
+    "  - height: Height of a sigle layer in pixels and on VRAM, just like width."
+    "  - u0: U component of texture mapping, ranged 0 ~~ 255 inclusive."
+    "        Think of this as the top left X coordinate."
+    "  - v0: V component of texture mapping, ranged 0 ~~ 255 inclusive (for BG0),"
+    "        or 256 ~~ 511 inclusive (for BG1)."
+    "  - scrollx: X scrolling factor for this layer when the camera moves."
+    "             Values can be informed as floats (e.g. 0.25) and will be"
+    "             converted to 32.12 fixed point integers on conversion."
+    "             Values closer to 0 ensure that the layer will remain static"
+    "             on screen."
+    "  - speedx: X automatic movement factor (towards the left) for this layer."
+    "            Generally used for movement effects on clouds, water, etc."
+    "  - single: Whether only a single strip of this layer will be drawn,"
+    "            preventing it from repeating. Normally used for very slowly"
+    "            moving or not-moving single elements such as islands on the"
+    "            background."
+    "  - y0: Y coordinate of this layer on screen. Recommended values are ranged"
+    "        0 ~~ 320, with notable exceptions such as the R5 (AOz) case.~%"
+
+    "Example of a proper parallax.toml file:"
+    "```toml"
+    "  [layer]"
+    "  width = 255"
+    "  height = 128"
+    "  u0 = 0"
+    "  v0 = 0"
+    "  scrollx = 0.25"
+    "  y0 = 128"
+    "  single = false"
+    "```"))
+
+(defmacro find-arg (argtest)
+  `(loop for arg in argv thereis ,argtest))
+
+(defun clean-args (args)
+  (remove-if (lambda (x) (member x '("-h" "--help" "-d" "--dry-run") :test #'string=))
+             args))
+
+(defun main (&rest argv)
+  (let* ((usage-only (find-arg (or (string= arg "-h")
+                                   (string= arg "--help"))))
+         (dry-run (find-arg (or (string= arg "-d")
+                                (string= arg "--dry-run"))))
+         (args (clean-args argv))
+         (input-path (and (first args)
+                          (probe-file (first args)))))
+    (format t "~a~%" args)
+    (cond (usage-only
+           (show-usage)
+           (uiop:quit 0))
+          ((not (and (eq (type-of input-path) 'pathname)
+                     (string= (string-upcase (pathname-type input-path)) "TOML")))
+           (format t "ERROR: Invalid source file ~a.~%Conversion terminated.~%"
+                   input-path)
+           (uiop:quit 1))
+          (t (let* ((directory (uiop:pathname-directory-pathname input-path))
+                    (output-path (merge-pathnames directory "PRL.PRL")))
+               (if dry-run
+                   (format t "~a~%" (buildprl:gen-parallax input-path))
+                   (progn
+                     (buildprl:build-parallax input-path output-path)
+                     output-path))
+               (uiop:quit 0))))))
