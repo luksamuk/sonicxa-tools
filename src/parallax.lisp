@@ -1,5 +1,11 @@
 (in-package #:buildprl)
 
+;; Perharps I need to warn anyone reading this code that I am very tired
+;; right now and working on this project at night. I was going to make a
+;; decent abstraction with metaclasses so I could reuse a byte field definition
+;; DSL on other tools but this is currently working, so I won't care until
+;; further notice
+
 (defstruct parallax-strip
   (name "" :type string)
   (u0 0 :type fixnum)
