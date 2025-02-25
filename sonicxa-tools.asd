@@ -7,7 +7,7 @@
   :depends-on (#:uiop
                #:alexandria
                #:cl-json
-	       #:cxml
+	       #:cl-tiled
 	       #:cl-toml
                #:data-frame
                #:cl-geometry)

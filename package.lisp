@@ -64,7 +64,7 @@
 
 (defpackage #:piecegen.tiles
   (:use #:cl #:sonicxa-tools.utils)
-  (:documentation "Convert 16x16 tile mappings (*.tmx) to MAP16.MAP"))
+  (:documentation "Convert 16x16 tile mappings (*.tsx) to MAP16.MAP"))
 
 (defpackage #:piecegen.collision
   (:use #:cl #:sonicxa-tools.utils)

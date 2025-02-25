@@ -14,10 +14,10 @@
  (:class qlot/source/ql:source-ql
   :initargs (:%version :latest)
   :version "ql-2022-07-07"))
-("cxml" .
+("cl-tiled" .
  (:class qlot/source/ql:source-ql
   :initargs (:%version :latest)
-  :version "ql-2020-06-10"))
+  :version "ql-2024-10-12"))
 ("cl-toml" .
  (:class qlot/source/ql:source-ql
   :initargs (:%version :latest)
