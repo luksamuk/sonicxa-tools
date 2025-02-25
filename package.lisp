@@ -88,7 +88,9 @@
 
 (defpackage #:buildprl
   (:use #:cl #:sonicxa-tools.utils)
-  (:documentation "Converts level parallax.toml to PRL.PRL"))
+  (:documentation "Converts level parallax.toml to PRL.PRL")
+  (:export gen-parallax
+           build-parallax))
 
 ;; TODO: cookmdl
 ;; (defpackage #:convrsd
